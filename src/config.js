@@ -1,5 +1,6 @@
 // Committed, non-secret config. Secrets come from env (see .env.example).
-// Values marked TODO are derived in the stage plan - DO NOT guess them.
+// Every derived value (center, tileSizeM, caps, minPerformanceScore) is data-sourced
+// with a docs/ citation inline - none are guessed. Re-derive before changing them.
 export const config = {
   // Hampton, VIC centroid - Google Geocoding API (scripts/geocode-centre.mjs),
   // resolved 2026-06-23 from "Hampton VIC 3188, Australia".
