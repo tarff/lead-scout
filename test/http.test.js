@@ -33,3 +33,12 @@ test('does not retry on 4xx other than 429', async () => {
   await assert.rejects(() => requestJson('https://x', {}, { fetchImpl, maxRetries: 3, baseDelayMs: 0 }), /HTTP 403/);
   assert.equal(calls, 1);
 });
+
+test('clamps an excessive Retry-After to maxDelayMs (DoS guard)', async () => {
+  let calls = 0;
+  const start = Date.now();
+  const fetchImpl = async () => (++calls < 2 ? resp(429, {}, { 'retry-after': '100000' }) : resp(200, { ok: 1 }));
+  const out = await requestJson('https://x', {}, { fetchImpl, maxRetries: 2, baseDelayMs: 0, maxDelayMs: 0 });
+  assert.deepEqual(out, { ok: 1 });
+  assert.ok(Date.now() - start < 1000, 'a huge Retry-After must be clamped, not honoured');
+});
