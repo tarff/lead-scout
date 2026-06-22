@@ -18,6 +18,8 @@ const emailOK = {
 test('no channel => Research only', () => only({}, 'no_lawful_channel'));
 test('suppressed always blocks even if otherwise valid', () =>
   only({ ...emailOK, suppressed: true }, 'suppressed'));
+test('missing suppression status blocks even if otherwise valid', () =>
+  only({ ...emailOK, suppressed: undefined }, 'missing_suppression_status'));
 test('sheet-style suppressed string false does not block', () =>
   ready({ ...emailOK, suppressed: 'false' }));
 test('sheet-style suppressed string true blocks', () =>

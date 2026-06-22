@@ -3,6 +3,7 @@
 // Mirrors docs/plans/2026-06-22-prospecting-agent-design.md.
 const has = (v) => typeof v === 'string' ? v.trim().length > 0 : !!v;
 const isTrue = (v) => v === true || (typeof v === 'string' && v.trim().toLowerCase() === 'true');
+const isFalse = (v) => v === false || (typeof v === 'string' && v.trim().toLowerCase() === 'false');
 const VALID_CONSENT = new Set(['express', 'inferred']);
 
 export function evaluate(lead) {
@@ -13,6 +14,7 @@ export function evaluate(lead) {
     reasons.push('suppressed');
     return research();
   }
+  if (!isFalse(lead.suppressed)) reasons.push('missing_suppression_status');
 
   switch (lead.contact_channel) {
     case 'email':
