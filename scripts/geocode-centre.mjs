@@ -12,6 +12,11 @@ const res = await fetch(url);
 if (!res.ok) throw new Error(`Geocoding HTTP ${res.status}: ${await res.text()}`);
 
 const data = await res.json();
+// Google returns HTTP 200 even for REQUEST_DENIED/ZERO_RESULTS — the real
+// reason is in data.status / data.error_message, so surface it explicitly.
+if (data.status !== 'OK') {
+  throw new Error(`Geocoding ${data.status}: ${data.error_message || `no result for ${address}`}`);
+}
 const first = data.results?.[0];
 if (!first) throw new Error(`No geocoding result for ${address}`);
 

@@ -1,9 +1,9 @@
 // Committed, non-secret config. Secrets come from env (see .env.example).
 // Values marked TODO are derived in the stage plan - DO NOT guess them.
 export const config = {
-  // TODO(stage plan: exact centroid) - confirm Hampton centre via Geocoding
-  // before discovery runs. Null prevents a guessed coordinate from being used.
-  center: null,
+  // Hampton, VIC centroid - Google Geocoding API (scripts/geocode-centre.mjs),
+  // resolved 2026-06-23 from "Hampton VIC 3188, Australia".
+  center: { lat: -37.9338333, lng: 145.0031893 },
   radiusM: 10000, // design: 10km target radius around Hampton, VIC
 
   // TODO(stage plan: tiling/cost derivation) - searchNearby returns max 20

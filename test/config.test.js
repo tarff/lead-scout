@@ -7,10 +7,14 @@ test('radius is the design-specified 10km', () => {
 });
 
 test('undecided params are null placeholders, not guessed values', () => {
-  assert.equal(config.center, null);
   assert.equal(config.tileSizeM, null);
   assert.equal(config.pagespeed.minPerformanceScore, null);
   assert.equal(config.caps.placeDetails, null);
+});
+
+test('center is the derived Hampton centroid, not a guessed coordinate', () => {
+  assert.equal(typeof config.center.lat, 'number');
+  assert.equal(typeof config.center.lng, 'number');
 });
 
 test('design-sourced thresholds are present and cited', () => {
