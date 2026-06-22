@@ -1,0 +1,10 @@
+{
+  "name": "lead-scout",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Compliant lead-research tool for Ctrl Alt Develop",
+  "scripts": {
+    "test": "node --test"
+  }
+}
