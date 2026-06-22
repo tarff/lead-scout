@@ -1,0 +1,22 @@
+const key = process.env.GOOGLE_API_KEY;
+if (!key) {
+  throw new Error('GOOGLE_API_KEY is required');
+}
+
+const address = process.argv.slice(2).join(' ') || 'Hampton VIC Australia';
+const url = new URL('https://maps.googleapis.com/maps/api/geocode/json');
+url.searchParams.set('address', address);
+url.searchParams.set('key', key);
+
+const res = await fetch(url);
+if (!res.ok) throw new Error(`Geocoding HTTP ${res.status}: ${await res.text()}`);
+
+const data = await res.json();
+const first = data.results?.[0];
+if (!first) throw new Error(`No geocoding result for ${address}`);
+
+console.log(JSON.stringify({
+  address,
+  formatted_address: first.formatted_address,
+  location: first.geometry?.location,
+}, null, 2));

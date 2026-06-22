@@ -18,7 +18,7 @@ export const DISCOVERY_COLUMNS = [
   'query_key', 'category', 'place_type', 'tile_id', 'rank_preference',
   'center_lat', 'center_lng', 'radius_m',
   'status', 'result_count', 'cap_hit', 'started_at', 'completed_at',
-  'last_error', 'updated_at',
+  'last_error', 'updated_at', 'query_mode', 'text_query',
 ];
 
 export const LEAD_STATUS = ['Discovered', 'Enriched', 'Needs PageSpeed',

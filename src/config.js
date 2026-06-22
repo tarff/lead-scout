@@ -19,7 +19,7 @@ export const config = {
   },
 
   // TODO(stage plan: pricing derivation) - hard per-run caps per paid SKU/stage.
-  caps: { searchNearby: null, placeDetails: null, pagespeed: null, drafts: null },
+  caps: { searchNearby: null, searchText: null, placeDetails: null, pagespeed: null, drafts: null },
 
   model: 'anthropic/claude-haiku-4.5', // confirmed on OpenRouter 2026-06-22
   dryRun: process.env.DRY_RUN !== 'false', // safe default: dry-run unless told otherwise

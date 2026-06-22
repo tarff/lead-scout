@@ -2,10 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runPipeline } from '../src/pipeline.js';
 
-const baseCaps = { searchNearby: 10, placeDetails: 10, pagespeed: 10, drafts: 10 };
+const baseCaps = { searchNearby: 10, searchText: 10, placeDetails: 10, pagespeed: 10, drafts: 10 };
 
 function fakes(overrides = {}) {
-  const calls = { appendLeads: [], updateLead: [], updateQuery: [], llm: 0 };
+  const calls = { appendLeads: [], updateLead: [], updateQuery: [], llm: 0, pagespeed: 0 };
   const deps = {
     apiKey: 'k', pagespeedCfg: { minPerformanceScore: null, maxLcpMs: 2500, requireHttps: true },
     readLeads: async () => [],
@@ -13,7 +13,8 @@ function fakes(overrides = {}) {
       place_type: 'plumber', tile_id: '0_0', center_lat: -37.9, center_lng: 145, radius_m: 700 }],
     searchNearby: async () => [{ place_id: 'p1', business_name: 'Acme' }], // no website => hot
     placeDetails: async () => ({ website_url: '', phone: '03 9000 0000' }),
-    runPagespeed: async () => ({ performanceScore: null, lcpMs: null, failedAudits: [] }),
+    searchText: async () => [{ place_id: 't1', business_name: 'Text Result' }],
+    runPagespeed: async () => { calls.pagespeed++; return { performanceScore: null, lcpMs: null, failedAudits: [] }; },
     callLLM: async () => { calls.llm++; return 'opener'; },
     appendLeads: async (rows) => { calls.appendLeads.push(rows.length); return { startRow: 2 }; },
     updateLead: async (l) => { calls.updateLead.push([l.place_id, l.status]); },
@@ -100,4 +101,72 @@ test('resume: an existing Discovered lead is enriched + updated even with no new
   });
   await runPipeline({ ...deps, dryRun: false, caps: baseCaps });
   assert.ok(calls.updateLead.some(([id]) => id === 'old1'), 'resumable lead picked up and updated');
+});
+
+test('text query rows call searchText, not searchNearby', async () => {
+  let nearby = 0, text = 0;
+  const { deps } = fakes({
+    readQueries: async () => [{ _row: 2, query_key: 'text', status: 'Pending', query_mode: 'text',
+      text_query: 'deck builder Hampton VIC', center_lat: -37.9, center_lng: 145, radius_m: 700 }],
+    searchNearby: async () => { nearby++; return []; },
+    searchText: async () => { text++; return [{ place_id: 't1', business_name: 'Text Result' }]; },
+  });
+  await runPipeline({ ...deps, dryRun: true, caps: baseCaps });
+  assert.equal(nearby, 0);
+  assert.equal(text, 1);
+});
+
+test('searchText cap is enforced independently from searchNearby', async () => {
+  const logs = [];
+  const { deps } = fakes({
+    readQueries: async () => Array.from({ length: 3 }, (_, i) => ({
+      _row: 2 + i, query_key: `text${i}`, status: 'Pending', query_mode: 'text',
+      text_query: `deck builder ${i}`, center_lat: -37.9, center_lng: 145, radius_m: 700 })),
+    log: (m) => logs.push(m),
+  });
+  const summary = await runPipeline({ ...deps, dryRun: true, caps: { ...baseCaps, searchText: 1 } });
+  assert.equal(summary.textSearches, 1);
+  assert.ok(logs.some((m) => /searchText cap reached/i.test(m)));
+});
+
+test('draft cap leaves Review-ready leads Qualified for the next run', async () => {
+  const logs = [];
+  const { deps, calls } = fakes({
+    readQueries: async () => [],
+    readLeads: async () => [{ _row: 9, place_id: 'ready1', business_name: 'Ready Co', status: 'Qualified',
+      qualification: 'hot', evidence_summary: 'no_website', contact_channel: 'email',
+      consent_basis: 'inferred', consent_evidence: 'website', caller_identity: 'Ctrl Alt Develop',
+      sender_contact: 'hello@ctrlaltdevelop.io', unsubscribe: 'reply STOP', suppressed: false }],
+    log: (m) => logs.push(m),
+  });
+  await runPipeline({ ...deps, dryRun: false, caps: { ...baseCaps, drafts: 0 } });
+  assert.equal(calls.llm, 0);
+  assert.ok(calls.updateLead.some(([id, status]) => id === 'ready1' && status === 'Qualified'));
+  assert.ok(logs.some((m) => /draft cap reached/i.test(m)));
+});
+
+test('manual compliance completion on a Research-only row resumes drafting', async () => {
+  const { deps, calls } = fakes({
+    readQueries: async () => [],
+    readLeads: async () => [{ _row: 10, place_id: 'manual1', business_name: 'Manual Co', status: 'Research only',
+      qualification: 'hot', evidence_summary: 'no_website', contact_channel: 'email',
+      consent_basis: 'inferred', consent_evidence: 'website', caller_identity: 'Ctrl Alt Develop',
+      sender_contact: 'hello@ctrlaltdevelop.io', unsubscribe: 'reply STOP', suppressed: false }],
+    runPagespeed: async () => { throw new Error('manual reviewed qualification should be reused'); },
+  });
+  await runPipeline({ ...deps, dryRun: false, caps: baseCaps });
+  assert.equal(calls.llm, 1);
+  assert.ok(calls.updateLead.some(([id, status]) => id === 'manual1' && status === 'Review ready'));
+});
+
+test('placeDetails enrichment is checkpointed before later paid stages can fail', async () => {
+  const { deps, calls } = fakes({
+    readQueries: async () => [],
+    readLeads: async () => [{ _row: 12, place_id: 'site1', business_name: 'Site Co', status: 'Discovered' }],
+    placeDetails: async () => ({ website_url: 'https://site.example', phone: '03 9' }),
+    runPagespeed: async () => { throw new Error('pagespeed boom'); },
+  });
+  await runPipeline({ ...deps, dryRun: false, caps: baseCaps });
+  const statuses = calls.updateLead.filter(([id]) => id === 'site1').map(([, status]) => status);
+  assert.deepEqual(statuses, ['Enriched', 'Error']);
 });

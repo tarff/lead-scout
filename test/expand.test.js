@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { expandDiscoveryQueries } from '../src/expand.js';
 
 const cats = [{ category: 'trades', place_types: ['plumber', 'electrician'] }];
+const mixedCats = [{ category: 'home_services', place_types: ['locksmith'], text_queries: ['deck builder Hampton VIC'] }];
 const center = { lat: -37.93, lng: 145.01 };
 
 test('expands category × place_type × tile into unique keyed rows', () => {
@@ -12,7 +13,17 @@ test('expands category × place_type × tile into unique keyed rows', () => {
   assert.equal(rows.length, 2);
   assert.equal(new Set(rows.map((r) => r.query_key)).size, 2);
   assert.equal(rows[0].status, 'Pending');
+  assert.equal(rows[0].query_mode, 'nearby');
   assert.equal(rows[0].center_lat, center.lat);
+});
+
+test('expands text query seeds as text-mode discovery rows', () => {
+  const rows = expandDiscoveryQueries({ categories: mixedCats, center, radiusM: 10000, tileSizeM: 30000,
+    rankPreference: 'distance' });
+  const text = rows.find((r) => r.query_mode === 'text');
+  assert.ok(text);
+  assert.equal(text.text_query, 'deck builder Hampton VIC');
+  assert.equal(text.place_type, '');
 });
 
 test('is idempotent — same inputs produce the same keys', () => {
