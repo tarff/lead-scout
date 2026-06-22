@@ -4,6 +4,7 @@ import { qualify } from './qualify.js';
 import { score } from './score.js';
 import { evaluate } from './compliance.js';
 import { draftForLead } from './draft.js';
+import { PLACES_PAGE_SIZE } from './places.js';
 
 const nowIso = () => new Date().toISOString();
 // Leads not yet finished — picked up on resume.
@@ -35,14 +36,25 @@ export async function runPipeline(deps) {
       fresh.forEach((f) => existingIds.add(f.place_id));
       summary.new += fresh.length;
       const staged = fresh.map((f) => ({ ...f, status: 'Discovered', first_seen_at: nowIso(), updated_at: nowIso() }));
-      if (!dryRun && staged.length) {
+      if (dryRun) {
+        toProcess.push(...staged); // in-memory only, for the dry-run summary
+      } else if (staged.length) {
         const { startRow } = await deps.appendLeads(staged); // STAGE before paid enrichment
-        staged.forEach((s, i) => { s._row = startRow == null ? null : startRow + i; });
         summary.appended += staged.length;
+        if (startRow == null) {
+          // No row numbers → we can't checkpoint/update these leads. Do NOT
+          // enrich them now (that paid work couldn't be persisted and would be
+          // re-billed); they're already in the sheet as Discovered and the next
+          // run resumes them with correct row numbers via readLeads().
+          log(`WARNING: appendLeads returned no startRow for ${staged.length} lead(s) — enrichment deferred to next run`);
+        } else {
+          staged.forEach((s, i) => { s._row = startRow + i; });
+          toProcess.push(...staged);
+        }
       }
-      toProcess.push(...staged);
-      if (!dryRun) await deps.updateQuery({ ...q, status: found.length >= 20 ? 'Capped' : 'Completed',
-        result_count: found.length, cap_hit: found.length >= 20, completed_at: nowIso() });
+      const capped = found.length >= PLACES_PAGE_SIZE;
+      if (!dryRun) await deps.updateQuery({ ...q, status: capped ? 'Capped' : 'Completed',
+        result_count: found.length, cap_hit: capped, completed_at: nowIso() });
     } catch (e) {
       summary.errors++;
       if (!dryRun) await deps.updateQuery({ ...q, status: 'Error', last_error: e.message });
@@ -50,7 +62,8 @@ export async function runPipeline(deps) {
   }
 
   // --- 3. enrich → qualify → score → compliance → draft → update row (per-item isolated) ---
-  let enriched = 0, pageSpeeds = 0, drafts = 0, detailsCapLogged = false;
+  let enriched = 0, pageSpeeds = 0, drafts = 0;
+  let detailsCapLogged = false, pagespeedCapLogged = false, draftsCapLogged = false;
   for (const lead of toProcess) {
     try {
       if (lead.status === 'Discovered') {
@@ -63,7 +76,10 @@ export async function runPipeline(deps) {
         lead.status = 'Enriched';
       }
       let pagespeed = null;
-      if (lead.website_url && pageSpeeds < caps.pagespeed) { pageSpeeds++; pagespeed = await deps.runPagespeed(lead.website_url, deps.apiKey); }
+      if (lead.website_url) {
+        if (pageSpeeds < caps.pagespeed) { pageSpeeds++; pagespeed = await deps.runPagespeed(lead.website_url, deps.apiKey); }
+        else if (!pagespeedCapLogged) { log('pagespeed cap reached, remaining sites deferred (Needs PageSpeed)'); pagespeedCapLogged = true; }
+      }
       const q = qualify(lead, pagespeed, deps.pagespeedCfg);
       lead.qualification = q.qualification;
       lead.evidence_summary = q.reasons.join(', ');
@@ -88,6 +104,9 @@ export async function runPipeline(deps) {
           if (lead.draft_type === 'outreach') { summary.drafted++; drafts++; }
           lead.status = 'Review ready';
         } else {
+          if (gate.status === 'Review ready' && !dryRun && drafts >= caps.drafts && !draftsCapLogged) {
+            log('drafts cap reached, remaining Review-ready leads deferred (status Drafted, no opener)'); draftsCapLogged = true;
+          }
           lead.status = gate.status === 'Review ready' ? 'Drafted' : 'Research only';
         }
       }

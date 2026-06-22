@@ -24,6 +24,19 @@ function fakes(overrides = {}) {
   return { deps, calls };
 }
 
+test('append with no row number defers enrichment (no paid work it cannot persist) and warns', async () => {
+  const logs = [];
+  let detailsCalls = 0;
+  const { deps } = fakes({
+    appendLeads: async () => ({ startRow: null }), // cannot determine row numbers
+    placeDetails: async () => { detailsCalls++; return { website_url: '', phone: '03 9' }; },
+    log: (m) => logs.push(m),
+  });
+  await runPipeline({ ...deps, dryRun: false, caps: baseCaps });
+  assert.equal(detailsCalls, 0, 'must not pay for enrichment that cannot be checkpointed');
+  assert.ok(logs.some((m) => /no startRow/i.test(m)), 'warns about the deferred leads');
+});
+
 test('dry-run performs NO writes and NO LLM calls', async () => {
   const { deps, calls } = fakes();
   const summary = await runPipeline({ ...deps, dryRun: true, caps: baseCaps });

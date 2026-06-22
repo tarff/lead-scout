@@ -7,6 +7,10 @@ const DETAILS = (id) => `https://places.googleapis.com/v1/places/${id}`;
 const DISCOVERY_MASK = 'places.id,places.displayName,places.primaryType,places.location,places.formattedAddress';
 const DETAILS_MASK = 'id,websiteUri,nationalPhoneNumber,internationalPhoneNumber';
 
+// Max results searchNearby/searchText return per request. Hitting this means a
+// tile is saturated and should be re-searched at finer granularity (Capped).
+export const PLACES_PAGE_SIZE = 20;
+
 export function mapDiscovery(p) {
   return {
     place_id: p.id,
@@ -24,7 +28,7 @@ export function mapDetails(p) {
   };
 }
 
-export async function searchNearby({ apiKey, includedTypes, center, radius, maxResultCount = 20 }, opts = {}) {
+export async function searchNearby({ apiKey, includedTypes, center, radius, maxResultCount = PLACES_PAGE_SIZE }, opts = {}) {
   const body = {
     includedTypes, maxResultCount,
     locationRestriction: { circle: { center: { latitude: center.lat, longitude: center.lng }, radius } },
@@ -37,7 +41,7 @@ export async function searchNearby({ apiKey, includedTypes, center, radius, maxR
   return (data.places || []).map(mapDiscovery);
 }
 
-export async function searchText({ apiKey, textQuery, center, radius, maxResultCount = 20 }, opts = {}) {
+export async function searchText({ apiKey, textQuery, center, radius, maxResultCount = PLACES_PAGE_SIZE }, opts = {}) {
   const body = {
     textQuery, maxResultCount,
     locationBias: { circle: { center: { latitude: center.lat, longitude: center.lng }, radius } },

@@ -23,8 +23,10 @@ export async function defaultCallLLM(prompt, { apiKey, model }, opts = {}) {
 export async function draftForLead(lead, deps) {
   const gate = evaluate(lead);
   if (gate.status !== 'Review ready') {
-    return { draft_type: 'internal_note', draft_opener: '',
-      compliance_status: gate.status, last_error: '' , _reasons: gate.reasons };
+    // Internal note only — never outreach copy, LLM never called. (In the
+    // pipeline, non-ready leads are handled by its own else-branch, so this
+    // path is exercised mainly by unit tests / direct callers.)
+    return { draft_type: 'internal_note', draft_opener: '', compliance_status: gate.status };
   }
   const opener = await deps.callLLM(buildPrompt(lead));
   return { draft_type: 'outreach', draft_opener: opener, compliance_status: 'Review ready' };
