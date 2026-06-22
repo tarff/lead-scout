@@ -6,8 +6,8 @@ test('radius is the design-specified 10km', () => {
   assert.equal(config.radiusM, 10000);
 });
 
-test('undecided params are null placeholders, not guessed values', () => {
-  assert.equal(config.pagespeed.minPerformanceScore, null);
+test('PageSpeed cutoff is the derived bottom-quartile, not a guess (docs/threshold-calibration.md)', () => {
+  assert.equal(config.pagespeed.minPerformanceScore, 42);
 });
 
 test('center is the derived Hampton centroid, not a guessed coordinate', () => {

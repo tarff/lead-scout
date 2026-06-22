@@ -11,9 +11,9 @@ export const config = {
   tileSizeM: 4000,
 
   pagespeed: {
-    // TODO(stage plan: threshold calibration) - cutoff set from sampled real
-    // local sites; null means "perf-score signal disabled" until calibrated.
-    minPerformanceScore: null,
+    // Bottom-quartile (q25) of 37 sampled local sites - docs/threshold-calibration.md,
+    // 2026-06-23. Sites scoring below this are flagged low_performance.
+    minPerformanceScore: 42,
     maxLcpMs: 2500, // Core Web Vitals "good" LCP upper bound (Google CWV)
     requireHttps: true,
   },
