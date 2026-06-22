@@ -30,6 +30,11 @@ export function validateRunnableConfig(cfg) {
 
 const toRow = (obj, columns) => columns.map((c) => (obj[c] ?? '').toString());
 
+// Sheets allows 60 write requests/min/user. A burst of per-lead updates can hit
+// it, so give writes a retry budget that can outlast a full 1-min throttle window
+// (1s base, doubling, capped 60s: 1+2+4+8+16+32 = 63s over 6 retries).
+const SHEET_WRITE_OPTS = { maxRetries: 6, baseDelayMs: 1000, maxDelayMs: 60000 };
+
 export async function main(env = process.env, log = console.log) {
   requireSecrets(env);
   validateRunnableConfig(config);
@@ -75,11 +80,11 @@ export async function main(env = process.env, log = console.log) {
       model: env.OPENROUTER_MODEL || config.model,
     }),
     appendLeads: (rows) => appendRows(sheetId, 'Leads',
-      rows.map((r) => toRow(r, LEADS_COLUMNS)), token),
+      rows.map((r) => toRow(r, LEADS_COLUMNS)), token, SHEET_WRITE_OPTS),
     updateLead: (lead) => updateRow(sheetId, 'Leads', lead._row,
-      toRow(lead, LEADS_COLUMNS), token),
+      toRow(lead, LEADS_COLUMNS), token, SHEET_WRITE_OPTS),
     updateQuery: (q) => updateRow(sheetId, 'DiscoveryQueries', q._row,
-      toRow(q, DISCOVERY_COLUMNS), token),
+      toRow(q, DISCOVERY_COLUMNS), token, SHEET_WRITE_OPTS),
     log,
   });
 
