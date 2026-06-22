@@ -38,7 +38,8 @@ test('clamps an excessive Retry-After to maxDelayMs (DoS guard)', async () => {
   let calls = 0;
   const start = Date.now();
   const fetchImpl = async () => (++calls < 2 ? resp(429, {}, { 'retry-after': '100000' }) : resp(200, { ok: 1 }));
-  const out = await requestJson('https://x', {}, { fetchImpl, maxRetries: 2, baseDelayMs: 0, maxDelayMs: 0 });
+  const out = await requestJson('https://x', {}, { fetchImpl, maxRetries: 2, baseDelayMs: 0, maxDelayMs: 50 });
   assert.deepEqual(out, { ok: 1 });
-  assert.ok(Date.now() - start < 1000, 'a huge Retry-After must be clamped, not honoured');
+  // If the clamp were broken, the 100000s Retry-After would hang well past 1s.
+  assert.ok(Date.now() - start < 1000, 'a huge Retry-After must be clamped to maxDelayMs, not honoured');
 });
