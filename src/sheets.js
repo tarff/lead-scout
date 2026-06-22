@@ -55,3 +55,32 @@ export async function updateRow(sheetId, tab, row, values, token, opts = {}) {
   const url = `${BASE}/${sheetId}/values/${encodeURIComponent(`${tab}!A${row}`)}?valueInputOption=RAW`;
   return requestJson(url, authInit(token, { method: 'PUT', body: JSON.stringify({ values: [values] }) }), opts);
 }
+
+// Clear all values below the header row (keeps the header).
+export async function clearTab(sheetId, tab, token, opts = {}) {
+  const url = `${BASE}/${sheetId}/values/${encodeURIComponent(`${tab}!A2:ZZ`)}:clear`;
+  return requestJson(url, authInit(token, { method: 'POST', body: '{}' }), opts);
+}
+
+// Resolve a tab's numeric sheetId (gid), needed for batchUpdate formatting.
+export async function getSheetGid(sheetId, tab, token, opts = {}) {
+  const url = `${BASE}/${sheetId}?fields=sheets(properties(sheetId,title))`;
+  const data = await requestJson(url, authInit(token), opts);
+  const sheet = (data.sheets || []).find((s) => s.properties?.title === tab);
+  if (!sheet) throw new Error(`tab not found: ${tab}`);
+  return sheet.properties.sheetId;
+}
+
+// Freeze the header row and hide the columns from startIndex (0-based, inclusive)
+// to the end, so the working columns stay visible and internal ones are out of view.
+export async function formatWorkingView(sheetId, tab, hideFromIndex, token, opts = {}) {
+  const gid = await getSheetGid(sheetId, tab, token, opts);
+  const requests = [
+    { updateSheetProperties: { properties: { sheetId: gid, gridProperties: { frozenRowCount: 1 } },
+      fields: 'gridProperties.frozenRowCount' } },
+    { updateDimensionProperties: { range: { sheetId: gid, dimension: 'COLUMNS', startIndex: hideFromIndex },
+      properties: { hiddenByUser: true }, fields: 'hiddenByUser' } },
+  ];
+  const url = `${BASE}/${sheetId}:batchUpdate`;
+  return requestJson(url, authInit(token, { method: 'POST', body: JSON.stringify({ requests }) }), opts);
+}

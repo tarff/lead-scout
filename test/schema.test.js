@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LEADS_COLUMNS, DISCOVERY_COLUMNS, LEAD_STATUS, QUERY_STATUS } from '../src/schema.js';
+import { LEADS_COLUMNS, DISCOVERY_COLUMNS, LEAD_STATUS, QUERY_STATUS,
+  LEADS_HEADER_ROW, LEADS_VISIBLE_COUNT, HEADER_LABELS, labelRowToKeys } from '../src/schema.js';
 
 const noDupes = (arr) => assert.equal(new Set(arr).size, arr.length);
 
@@ -10,6 +11,25 @@ test('Leads columns have no duplicates and key fields present', () => {
     'contacted', 'sender_contact', 'unsubscribe', 'contact_form_manual_only',
     'do_not_call_note'])
     assert.ok(LEADS_COLUMNS.includes(c), `missing ${c}`);
+});
+
+test('the first visible Leads columns are the human working set, friendly-labelled', () => {
+  assert.deepEqual(LEADS_COLUMNS.slice(0, LEADS_VISIBLE_COUNT), [
+    'business_name', 'address', 'phone', 'website_url', 'primary_type',
+    'evidence_summary', 'score', 'status', 'draft_opener',
+  ]);
+  assert.deepEqual(LEADS_HEADER_ROW.slice(0, 4), ['Business Name', 'Address', 'Phone', 'Website']);
+});
+
+test('every Leads column has a friendly label and the header row matches column order', () => {
+  assert.equal(LEADS_HEADER_ROW.length, LEADS_COLUMNS.length);
+  for (const c of LEADS_COLUMNS) assert.ok(HEADER_LABELS[c], `missing label for ${c}`);
+});
+
+test('labelRowToKeys translates a label-keyed sheet row back to snake_case keys, keeping _row', () => {
+  const fromSheet = { 'Business Name': 'Acme', Website: 'https://x', Status: 'Enriched', _row: 5 };
+  assert.deepEqual(labelRowToKeys(fromSheet),
+    { business_name: 'Acme', website_url: 'https://x', status: 'Enriched', _row: 5 });
 });
 
 test('DiscoveryQueries columns have no duplicates and key fields present', () => {

@@ -7,8 +7,8 @@ import { defaultCallLLM } from './draft.js';
 import { runPagespeed } from './pagespeed.js';
 import { placeDetails, searchNearby, searchText } from './places.js';
 import { runPipeline } from './pipeline.js';
-import { DISCOVERY_COLUMNS, LEADS_COLUMNS } from './schema.js';
-import { appendRows, readTab, updateRow, writeHeader } from './sheets.js';
+import { DISCOVERY_COLUMNS, LEADS_COLUMNS, LEADS_HEADER_ROW, LEADS_VISIBLE_COUNT, labelRowToKeys } from './schema.js';
+import { appendRows, formatWorkingView, readTab, updateRow, writeHeader } from './sheets.js';
 
 const REQUIRED = ['GOOGLE_API_KEY', 'OPENROUTER_API_KEY', 'GOOGLE_SHEETS_SA_JSON', 'SHEET_ID'];
 const REQUIRED_CAPS = ['searchNearby', 'searchText', 'placeDetails', 'pagespeed', 'drafts'];
@@ -38,8 +38,10 @@ export async function main(env = process.env, log = console.log) {
   const sheetId = env.SHEET_ID;
 
   if (!config.dryRun) {
-    await writeHeader(sheetId, 'Leads', LEADS_COLUMNS, token);
+    await writeHeader(sheetId, 'Leads', LEADS_HEADER_ROW, token);
     await writeHeader(sheetId, 'DiscoveryQueries', DISCOVERY_COLUMNS, token);
+    // Lean working view: freeze the header, hide the internal columns.
+    await formatWorkingView(sheetId, 'Leads', LEADS_VISIBLE_COUNT, token);
   }
 
   const existingQueries = await readTab(sheetId, 'DiscoveryQueries', token);
@@ -62,7 +64,7 @@ export async function main(env = process.env, log = console.log) {
     dryRun: config.dryRun,
     caps: config.caps,
     pagespeedCfg: config.pagespeed,
-    readLeads: () => readTab(sheetId, 'Leads', token),
+    readLeads: async () => (await readTab(sheetId, 'Leads', token)).map(labelRowToKeys),
     readQueries: () => readTab(sheetId, 'DiscoveryQueries', token),
     searchNearby,
     searchText,
