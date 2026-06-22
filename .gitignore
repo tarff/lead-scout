@@ -4,6 +4,7 @@ node_modules/
 !.env.example
 *.local
 dist/
+.worktrees/
 # Never commit credentials — these go in GitHub Actions secrets
 *service-account*.json
 *sa*.json
