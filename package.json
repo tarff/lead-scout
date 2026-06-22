@@ -5,6 +5,13 @@
   "type": "module",
   "description": "Compliant lead-research tool for Ctrl Alt Develop",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "start": "node --env-file=.env src/run.js",
+    "calibrate": "node --env-file=.env scripts/calibrate-threshold.mjs",
+    "derive-tiling": "node --env-file=.env scripts/derive-tiling.mjs",
+    "geocode": "node --env-file=.env scripts/geocode-centre.mjs"
+  },
+  "dependencies": {
+    "google-auth-library": "^10.7.0"
   }
 }
