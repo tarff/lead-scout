@@ -71,6 +71,21 @@ export async function getSheetGid(sheetId, tab, token, opts = {}) {
   return sheet.properties.sheetId;
 }
 
+// Sort every data row (below the frozen header) by one column, descending — so the
+// highest-scoring leads sit at the top. Empty cells sort to the bottom in Sheets,
+// which naturally sinks unqualified/zero-score rows beneath the real prospects.
+export async function sortByColumn(sheetId, tab, columnIndex, token, opts = {}) {
+  const gid = await getSheetGid(sheetId, tab, token, opts);
+  const requests = [{
+    sortRange: {
+      range: { sheetId: gid, startRowIndex: 1, startColumnIndex: 0 },
+      sortSpecs: [{ dimensionIndex: columnIndex, sortOrder: 'DESCENDING' }],
+    },
+  }];
+  const url = `${BASE}/${sheetId}:batchUpdate`;
+  return requestJson(url, authInit(token, { method: 'POST', body: JSON.stringify({ requests }) }), opts);
+}
+
 // Freeze the header row and hide the columns from startIndex (0-based, inclusive)
 // to the end, so the working columns stay visible and internal ones are out of view.
 export async function formatWorkingView(sheetId, tab, hideFromIndex, token, opts = {}) {

@@ -140,6 +140,7 @@ export async function runPipeline(deps) {
       }
 
       lead.priority = priorityLabel(q.qualification, q.qualification === 'warm' ? q.reasons.length : 0);
+      lead.score = score(q, lead); // sort key for every lead, so the sheet ranks cleanly top-to-bottom
 
       if (q.qualification === 'hot' || q.qualification === 'broken') summary.hot++;
       else if (q.qualification === 'warm') summary.warm++;
@@ -149,7 +150,6 @@ export async function runPipeline(deps) {
       } else if (q.qualification === 'dropped') {
         lead.status = 'Dropped';
       } else {
-        lead.score = score(q, lead);
         const gate = evaluate(lead);
         lead.compliance_status = gate.status;
         if (gate.status === 'Review ready' && drafts < caps.drafts && !dryRun) {

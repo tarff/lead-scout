@@ -8,7 +8,7 @@ import { runPagespeed } from './pagespeed.js';
 import { placeDetails, searchNearby, searchText } from './places.js';
 import { runPipeline } from './pipeline.js';
 import { DISCOVERY_COLUMNS, LEADS_COLUMNS, LEADS_HEADER_ROW, LEADS_VISIBLE_COUNT, labelRowToKeys } from './schema.js';
-import { appendRows, formatWorkingView, readTab, updateRow, writeHeader } from './sheets.js';
+import { appendRows, formatWorkingView, readTab, sortByColumn, updateRow, writeHeader } from './sheets.js';
 
 const REQUIRED = ['GOOGLE_API_KEY', 'OPENROUTER_API_KEY', 'GOOGLE_SHEETS_SA_JSON', 'SHEET_ID'];
 const REQUIRED_CAPS = ['searchNearby', 'searchText', 'placeDetails', 'pagespeed', 'drafts'];
@@ -87,6 +87,11 @@ export async function main(env = process.env, log = console.log) {
       toRow(q, DISCOVERY_COLUMNS), token, SHEET_WRITE_OPTS),
     log,
   });
+
+  // Leave the sheet ranked best-first so leads are ready to work top-down.
+  if (!config.dryRun) {
+    await sortByColumn(sheetId, 'Leads', LEADS_COLUMNS.indexOf('score'), token, SHEET_WRITE_OPTS);
+  }
 
   log(`DONE ${JSON.stringify(summary)}`);
   return summary;
