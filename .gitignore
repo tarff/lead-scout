@@ -8,3 +8,5 @@ dist/
 # Never commit credentials — these go in GitHub Actions secrets
 *service-account*.json
 *-sa.json
+# Local lead-data backups written by maintenance scripts (real PII — never commit)
+scripts/.leads-backup.json

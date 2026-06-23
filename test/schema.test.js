@@ -16,8 +16,11 @@ test('Leads columns have no duplicates and key fields present', () => {
 test('the first visible Leads columns are the human working set, friendly-labelled', () => {
   assert.deepEqual(LEADS_COLUMNS.slice(0, LEADS_VISIBLE_COUNT), [
     'business_name', 'address', 'phone', 'website_url', 'primary_type',
-    'evidence_summary', 'score', 'status', 'draft_opener',
+    'evidence_summary', 'priority', 'status', 'draft_opener',
   ]);
+  // the numeric score is retained but hidden as a sort key
+  assert.ok(!LEADS_COLUMNS.slice(0, LEADS_VISIBLE_COUNT).includes('score'));
+  assert.ok(LEADS_COLUMNS.includes('score'));
   assert.deepEqual(LEADS_HEADER_ROW.slice(0, 4), ['Business Name', 'Address', 'Phone', 'Website']);
 });
 

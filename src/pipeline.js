@@ -1,10 +1,11 @@
 import { filterNew } from './dedupe.js';
 import { selectPending } from './discovery.js';
 import { qualify } from './qualify.js';
-import { score } from './score.js';
+import { score, priorityLabel } from './score.js';
 import { evaluate } from './compliance.js';
 import { draftForLead } from './draft.js';
 import { PLACES_PAGE_SIZE } from './places.js';
+import { humanizeReasons } from './evidence.js';
 
 const nowIso = () => new Date().toISOString();
 
@@ -130,15 +131,17 @@ export async function runPipeline(deps) {
 
         q = qualify(lead, pagespeed, deps.pagespeedCfg);
         lead.qualification = q.qualification;
-        lead.evidence_summary = q.reasons.join(', ');
         if (pagespeed) {
           lead.pagespeed_score = pagespeed.performanceScore ?? '';
           lead.lcp_ms = pagespeed.lcpMs ?? '';
           lead.failed_audits = (pagespeed.failedAudits || []).join(',');
         }
+        lead.evidence_summary = humanizeReasons(q.reasons, lead).join(', ');
       }
 
-      if (q.qualification === 'hot') summary.hot++;
+      lead.priority = priorityLabel(q.qualification, q.qualification === 'warm' ? q.reasons.length : 0);
+
+      if (q.qualification === 'hot' || q.qualification === 'broken') summary.hot++;
       else if (q.qualification === 'warm') summary.warm++;
 
       if (q.qualification === 'needs_pagespeed') {

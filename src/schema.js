@@ -7,8 +7,9 @@
 export const LEADS_COLUMNS = [
   // --- working view (shown) ---
   'business_name', 'address', 'phone', 'website_url', 'primary_type',
-  'evidence_summary', 'score', 'status', 'draft_opener',
+  'evidence_summary', 'priority', 'status', 'draft_opener',
   // --- internal (hidden) ---
+  'score',
   'place_id', 'place_resource_name', 'contact_channel', 'contact_source',
   'consent_basis', 'consent_evidence', 'compliance_status', 'suppressed',
   'dncr_checked_at', 'dncr_result', 'phone_consent_basis',
@@ -28,8 +29,8 @@ export const LEADS_VISIBLE_COUNT = 9;
 export const HEADER_LABELS = {
   business_name: 'Business Name', address: 'Address', phone: 'Phone',
   website_url: 'Website', primary_type: 'Business Type',
-  evidence_summary: 'Why It Qualified', score: 'Score', status: 'Status',
-  draft_opener: 'Draft Opener',
+  evidence_summary: 'Why It Qualified', priority: 'Priority', status: 'Status',
+  draft_opener: 'Draft Opener', score: 'Score (sort key)',
   place_id: 'Place ID', place_resource_name: 'Place Resource Name',
   contact_channel: 'Contact Channel', contact_source: 'Contact Source',
   consent_basis: 'Consent Basis', consent_evidence: 'Consent Evidence',

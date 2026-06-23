@@ -14,6 +14,10 @@ export function qualify(lead, pagespeed, cfg) {
       : { qualification: 'needs_pagespeed', reasons: ['missing_pagespeed'] };
   }
 
+  // A site that would not load at all is effectively no working website — rank it
+  // at the top tier alongside no-website leads.
+  if (pagespeed.unreachable) return { qualification: 'broken', reasons: ['site_unreachable'] };
+
   if (cfg.minPerformanceScore != null && pagespeed.performanceScore != null
       && pagespeed.performanceScore < cfg.minPerformanceScore) reasons.push('low_performance');
   if (cfg.maxLcpMs != null && pagespeed.lcpMs != null && pagespeed.lcpMs > cfg.maxLcpMs) {

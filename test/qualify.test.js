@@ -37,6 +37,13 @@ test('LCP above max => warm', () => {
   assert.ok(r.reasons.includes('high_lcp'));
 });
 
+test('a site that will not load => broken (top tier)', () => {
+  const r = qualify({ website_url: 'http://dead.example' },
+    { performanceScore: null, lcpMs: null, failedAudits: [], unreachable: true }, cfg);
+  assert.equal(r.qualification, 'broken');
+  assert.ok(r.reasons.includes('site_unreachable'));
+});
+
 test('non-https site => warm', () => {
   const r = qualify({ website_url: 'http://x.com' }, good, cfg);
   assert.equal(r.qualification, 'warm');
