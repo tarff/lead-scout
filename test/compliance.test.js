@@ -70,3 +70,16 @@ test('phone missing telemarketing status => Research only', () =>
   only({ ...phoneOK, telemarketing_compliance_status: '' }, 'missing_telemarketing_status'));
 test('phone missing do-not-call note => Research only', () =>
   only({ ...phoneOK, do_not_call_note: '' }, 'missing_do_not_call_note'));
+
+const inPersonOK = {
+  contact_channel: 'in_person', caller_identity: 'Ctrl Alt Develop',
+  sender_contact: 'hello@ctrlaltdevelop.io', suppressed: false,
+};
+test('in-person visit needs only identity + contact (no consent/unsubscribe/DNCR) => Review ready', () =>
+  ready(inPersonOK));
+test('in-person missing caller identity => Research only', () =>
+  only({ ...inPersonOK, caller_identity: '' }, 'missing_sender_identity'));
+test('in-person missing follow-up contact => Research only', () =>
+  only({ ...inPersonOK, sender_contact: '' }, 'missing_sender_identity'));
+test('in-person still blocked when suppressed', () =>
+  only({ ...inPersonOK, suppressed: true }, 'suppressed'));

@@ -4,9 +4,19 @@ import { evaluate } from './compliance.js';
 const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 
 function buildPrompt(lead) {
+  const reason = lead.evidence_summary || lead.qualification;
+  if (lead.contact_channel === 'in_person') {
+    // Spoken icebreaker for a walk-in. Invites a low-pressure next step rather
+    // than closing on the spot, keeping it clear of ACL unsolicited-agreement rules.
+    return `Write a short, friendly SPOKEN opener (max 45 words) for ${lead.caller_identity || 'a local web designer'}`
+      + ` walking in to introduce a local web-design service to "${lead.business_name}".`
+      + ` Reference this issue with their website: ${reason}.`
+      + ` End by inviting a low-pressure next step (offer to show a quick before/after, or book a time later) —`
+      + ` do NOT try to close a sale on the spot. Just the spoken words: no greeting label, no sign-off.`;
+  }
   return `Write ONE friendly, specific opening line (max 30 words) for a local web-design`
     + ` outreach to "${lead.business_name}". Reason they qualified: ${lead.qualification}`
-    + ` (${(lead.evidence_summary || lead.qualification)}). No greeting, no sign-off, just the line.`;
+    + ` (${reason}). No greeting, no sign-off, just the line.`;
 }
 
 export async function defaultCallLLM(prompt, { apiKey, model }, opts = {}) {

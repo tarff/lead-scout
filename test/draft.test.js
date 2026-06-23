@@ -16,6 +16,19 @@ test('drafts outreach copy for a Review-ready lead', async () => {
   assert.match(r.draft_opener, /Acme Plumbing/);
 });
 
+test('in-person Review-ready lead gets a spoken icebreaker prompt', async () => {
+  let seenPrompt = '';
+  const inPerson = {
+    business_name: 'Acme Plumbing', qualification: 'broken', evidence_summary: "Website won't load — server not responding",
+    contact_channel: 'in_person', caller_identity: 'Ctrl Alt Develop',
+    sender_contact: 'hello@ctrlaltdevelop.io', suppressed: false,
+  };
+  const r = await draftForLead(inPerson, { callLLM: async (p) => { seenPrompt = p; return 'spoken line'; } });
+  assert.equal(r.draft_type, 'outreach');
+  assert.match(seenPrompt, /SPOKEN/);
+  assert.match(seenPrompt, /do NOT try to close/i);
+});
+
 test('NEVER drafts outreach for a Research-only lead — internal note only', async () => {
   let llmCalled = false;
   const r = await draftForLead({ ...reviewReady, suppressed: true },

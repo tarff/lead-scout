@@ -41,6 +41,16 @@ export function evaluate(lead) {
       if (!has(lead.do_not_call_note)) reasons.push('missing_do_not_call_note');
       break;
     }
+    case 'in_person': {
+      // Face-to-face visits / flyer dropoffs are physical, non-electronic contact:
+      // the Spam Act (email/SMS/DM) and the Do Not Call Register (telemarketing)
+      // don't apply, so no consent record / unsubscribe / DNCR is required. The
+      // keystone here is simply identifying yourself and giving a contact for
+      // follow-up. (Don't close a paid deal on the spot — see ACL unsolicited
+      // consumer agreement rules; the opener is written to invite a next step.)
+      if (!has(lead.caller_identity) || !has(lead.sender_contact)) reasons.push('missing_sender_identity');
+      break;
+    }
     default:
       reasons.push('no_lawful_channel');
   }
