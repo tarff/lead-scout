@@ -104,6 +104,15 @@ test('does not retry on 4xx other than 429', async () => {
   await assert.rejects(() => requestJson('https://x', {}, { fetchImpl, maxRetries: 3, baseDelayMs: 0 }), /HTTP 403/);
   assert.equal(calls, 1);
 });
+
+test('clamps an excessive Retry-After to maxDelayMs (DoS guard)', async () => {
+  let calls = 0;
+  const start = Date.now();
+  const fetchImpl = async () => (++calls < 2 ? resp(429, {}, { 'retry-after': '100000' }) : resp(200, { ok: 1 }));
+  const out = await requestJson('https://x', {}, { fetchImpl, maxRetries: 2, baseDelayMs: 0, maxDelayMs: 0 });
+  assert.deepEqual(out, { ok: 1 });
+  assert.ok(Date.now() - start < 1000, 'a huge Retry-After must be clamped, not honoured');
+});
 ```
 
 **Step 2: Run — expect FAIL.**
@@ -115,7 +124,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // fetch wrapper: JSON in/out, retry on 429 + 5xx with exponential backoff.
 export async function requestJson(url, init = {}, opts = {}) {
-  const { fetchImpl = fetch, maxRetries = 4, baseDelayMs = 500, timeoutMs = 30000 } = opts;
+  const { fetchImpl = fetch, maxRetries = 4, baseDelayMs = 500, timeoutMs = 30000, maxDelayMs = 60000 } = opts;
   let attempt = 0;
   for (;;) {
     attempt++;
@@ -138,8 +147,13 @@ export async function requestJson(url, init = {}, opts = {}) {
       const body = await res.text().catch(() => '');
       throw new Error(`HTTP ${res.status}: ${body.slice(0, 300)}`);
     }
+    // Honour Retry-After only when finite + positive; always clamp to maxDelayMs
+    // so a misbehaving upstream can't tie up the run with a huge value.
     const retryAfter = Number(res.headers.get('retry-after'));
-    const delay = Number.isFinite(retryAfter) ? retryAfter * 1000 : baseDelayMs * 2 ** (attempt - 1);
+    const expBackoff = Math.min(baseDelayMs * 2 ** (attempt - 1), maxDelayMs);
+    const delay = Number.isFinite(retryAfter) && retryAfter > 0
+      ? Math.min(retryAfter * 1000, maxDelayMs)
+      : expBackoff;
     await sleep(delay);
   }
 }

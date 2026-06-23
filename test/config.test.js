@@ -6,11 +6,20 @@ test('radius is the design-specified 10km', () => {
   assert.equal(config.radiusM, 10000);
 });
 
-test('undecided params are null placeholders, not guessed values', () => {
-  assert.equal(config.center, null);
-  assert.equal(config.tileSizeM, null);
-  assert.equal(config.pagespeed.minPerformanceScore, null);
-  assert.equal(config.caps.placeDetails, null);
+test('PageSpeed cutoff is the derived bottom-quartile, not a guess (docs/threshold-calibration.md)', () => {
+  assert.equal(config.pagespeed.minPerformanceScore, 42);
+});
+
+test('center is the derived Hampton centroid, not a guessed coordinate', () => {
+  assert.equal(typeof config.center.lat, 'number');
+  assert.equal(typeof config.center.lng, 'number');
+});
+
+test('tile size + every cap are derived finite numbers (docs/cost-model.md)', () => {
+  assert.equal(config.tileSizeM, 4000);
+  for (const k of ['searchNearby', 'searchText', 'placeDetails', 'pagespeed', 'drafts']) {
+    assert.ok(Number.isFinite(config.caps[k]) && config.caps[k] > 0, `cap ${k} must be a positive number`);
+  }
 });
 
 test('design-sourced thresholds are present and cited', () => {

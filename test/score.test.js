@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { score } from '../src/score.js';
+import { score, priorityLabel } from '../src/score.js';
 
 const hot = { qualification: 'hot', reasons: ['no_website'] };
 const warm1 = { qualification: 'warm', reasons: ['no_https'] };
@@ -33,4 +33,19 @@ test('needs_pagespeed outranks dropped so retryable leads are not buried with dr
 
 test('unknown qualification throws instead of silently ranking as dropped', () => {
   assert.throws(() => score({ qualification: 'typo', reasons: [] }, {}), /unknown qualification/);
+});
+
+test('priorityLabel reads in plain language for each tier', () => {
+  assert.match(priorityLabel('hot'), /no website/i);
+  assert.match(priorityLabel('broken'), /won't load/i);
+  assert.equal(priorityLabel('warm', 3), 'Warm — weak website (3 issues)');
+  assert.equal(priorityLabel('warm', 1), 'Warm — weak website (1 issue)');
+  assert.match(priorityLabel('needs_pagespeed'), /pending/i);
+  assert.match(priorityLabel('dropped'), /fine/i);
+});
+
+test('a broken (unreachable) site ranks at the top tier, with the no-website hots', () => {
+  const broken = { qualification: 'broken', reasons: ['site_unreachable'] };
+  assert.ok(score(broken, {}) > score(warm3, {}));
+  assert.equal(score(broken, {}), score(hot, {})); // same tier as no-website leads
 });

@@ -1,0 +1,30 @@
+name: prospect
+
+on:
+  schedule:
+    - cron: '0 19 * * 0'   # weekly, Sunday 19:00 UTC (Mon ~06:00 AEST) - adjust after first runs
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no writes / no LLM)'
+        type: boolean
+        default: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - run: node src/run.js
+        env:
+          # Scheduled runs go live; manual dispatch honours the dry_run toggle (default true).
+          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GOOGLE_SHEETS_SA_JSON: ${{ secrets.GOOGLE_SHEETS_SA_JSON }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
