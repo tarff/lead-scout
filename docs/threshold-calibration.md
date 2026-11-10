@@ -11,8 +11,8 @@ harvested live from a Places (New) discovery + Place Details enrichment pass
 2026-06-23. Each scored with `scripts/calibrate-threshold.mjs` → Google PageSpeed
 Insights, **mobile** strategy (`src/pagespeed.js`).
 
-Reproduce: `npm run calibrate -- <urls...>` (the harvested URL list is the sample
-table below).
+Reproduce: `npm run calibrate -- <urls...>` (the site names are kept private;
+the sites are numbered in the table below).
 
 ## Distribution (mobile performance score, 0–100)
 

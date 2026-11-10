@@ -9,4 +9,10 @@ appends them to a Google Sheet for review.
 cold sending (Australian Spam Act 2003).
 
 - Design: [`docs/plans/2026-06-22-prospecting-agent-design.md`](docs/plans/2026-06-22-prospecting-agent-design.md)
-- Status: pre-implementation
+- Setup: [`docs/SETUP.md`](docs/SETUP.md)
+- Status: built and in use. It has run weekly on GitHub Actions since June 2026.
+
+This public copy is for reading. Its scheduled run is switched off, because the
+API keys live in a private copy. The local business sites used to set the
+PageSpeed cutoff in [`docs/threshold-calibration.md`](docs/threshold-calibration.md)
+are shown as numbers rather than names.
